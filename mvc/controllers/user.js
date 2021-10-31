@@ -2,42 +2,57 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const { google } = require('googleapis')
 const { OAuth2 } = google.auth
-const {OAuth2Client} = require('google-auth-library');
+const { OAuth2Client } = require('google-auth-library');
+const Contest = mongoose.model("Contest");
+const User = mongoose.model("User");
 
-
-
-const auth = function(req,res)
-{
+const auth = function (req, res) {
   const CLIENT_ID = '966641561326-7nivlb5sna5dpcloaot4d51oba9n46ej.apps.googleusercontent.com'
   const client = new OAuth2Client(CLIENT_ID);
   let token = req.body.token;
-    // console.log(token)
+  // console.log(token)
+  let profile = req.body.profile;
+  let user = new User();
+  user.name = profile.Se;
+  user.email = profile.Tt;
+  user.save((err, user) => {
+    if (err) {
+      if (err.errmsg && err.errmsg.includes("duplicate key error") && err.errmsg.includes("email")) {
+       console.log( "Email already exists" );
+      }else console.log( "Something went wrong" );
+    } else {
+      console.log("New user added");;
+    }
+  })
+  async function verify() {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
+    });
+    const payload = ticket.getPayload();
+    const userid = payload['sub'];
 
-    async function verify() {
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
-        });
-        const payload = ticket.getPayload();
-        const userid = payload['sub'];
+    // console.log(payload)
+  }
+  verify()
+    .then(() => {
+      //       let tmp = JSON.parse(token);
+      // console.log(tmp);
+      res.cookie('session-token', token);
+      res.send('success');
+    })
+    .catch(console.error);
 
-        // console.log(payload)
-      }
-      verify()
-      .then(()=>{
-          res.cookie('session-token', token);
-          res.send('success');
-      })
-      .catch(console.error);
 }
-const clist = async function(req,res)
-{
+
+
+const clist = async function (req, res) {
   let clist_token = 'username=priyanshu_x&api_key=1e0a1d7b14cf84194ca2a240efc8e735b28b9422'
   let URL_BASE = 'https://clist.by/api/v2/'
 
   var d = new Date();
   d.setDate(d.getDate() - 2);
- 
+
   console.log(d)
   var c = JSON.stringify(d)
   c = c.substring(1)
@@ -45,28 +60,40 @@ const clist = async function(req,res)
 
   console.log(c)
 
-  let url = URL_BASE + 'contest/?limit=200&start__gte=' + c + '&' + clist_token
-
-
-
+  let url = URL_BASE + 'contest/?limit=20&start__gte=' + c + '&' + clist_token
+  let contestsAdded = [];
   // console.log(url)
 
   axios.get(url)
-  .then(r => {
-    var ele = r.data.objects;
-
-    ele.forEach(element => {
-      console.log(element.id + " " + element.start)
-    });
-    res.json({ response: r.data.objects });
-  })
-  .catch(error =>{
-    console.log(error);
-  })
+    .then(r => {
+      let contests = r.data.objects;
+      for (let contest of contests) {
+        let newContest = new Contest();
+        newContest.host = contest.host;
+        newContest.id = contest.id;
+        newContest.link = contest.href;
+        newContest.event = contest.event;
+        newContest.start = contest.start;
+        newContest.end = contest.end;
+        console.log(newContest);
+        newContest.save((err, val) => {
+          if (err) {
+            if (err.errmsg && err.errmsg.includes("duplicate key error") && err.errmsg.includes("email")) {
+              console.log("Email already exists");
+            }else console.log("Something went wrong");
+          } else {
+            contestsAdded.push(newContest);
+          }
+        })
+      }
+      res.json({ messsage: "contest added successfully" });
+    })
+    .catch(error => {
+      console.log(error);
+    })
 }
 
-const addCalendar = async function(req,res)
-{
+const addCalendar = async function (req, res) {
   // Create a new instance of oAuth and set our Client ID & Client Secret.
   const oAuth2Client = new OAuth2(
     '966641561326-7nivlb5sna5dpcloaot4d51oba9n46ej.apps.googleusercontent.com',
@@ -84,76 +111,95 @@ const addCalendar = async function(req,res)
 
 
   // Create a new event start date instance for temp uses in our calendar.
-  var eventStartTime = new Date()
-  eventStartTime.setDate(eventStartTime.getDay())
+  // var eventStartTime = new Date()
+  // eventStartTime.setDate(eventStartTime.getDay())
 
   // Create a new event end date instance for temp uses in our calendar.
-  var eventEndTime = new Date()
-  eventEndTime.setDate(eventEndTime.getDay())
-  eventEndTime.setMinutes(eventEndTime.getMinutes() + 45)
+  // var eventEndTime = new Date()
+  // eventEndTime.setDate(eventEndTime.getDay())
+  // eventEndTime.setMinutes(eventEndTime.getMinutes() + 45)
 
   // Create a dummy event for temp uses in our calendar
-  const event = {
-    summary: `Meeting with David`,
-    location: `3595 California St, San Francisco, CA 94118`,
-    description: `Meet with David to talk about the new client project and how to integrate the calendar for booking.`,
-    colorId: 1,
-    start: {
-      dateTime: eventStartTime,
-      timeZone: 'IST',
-    },
-    end: {
-      dateTime: eventEndTime,
-      timeZone: 'IST',
-    },
-  }
-
-  calendar.freebusy.query(
-    {
-      resource: {
-        timeMin: eventStartTime,
-        timeMax: eventEndTime,
-        timeZone: 'IST',
-        items: [{ id: 'primary' }],
-      },
-    },
-    (err, res) => {
-      // Check for errors in our query and log them if they exist.
-      if (err) return console.error('Free Busy Query Error: ', err)
-  
-      // Create an array of all events on our calendar during that time.
-      const eventArr = res.data.calendars.primary.busy
-  
-      // Check if event array is empty which means we are not busy
-      if (eventArr.length === 0)
-        // If we are not busy create a new calendar event.
-        return calendar.events.insert(
-          { calendarId: 'primary', resource: event },
-          err => {
-            // Check for errors and log them if they exist.
-            if (err) return console.error('Error Creating Calender Event:', err)
-            // Else log that the event was created.
-            return console.log('Calendar event successfully created.')
+  Contest.find((err,contests)=>{
+    if (err) {
+      console.log("error at 125",err);
+    }else{
+      for(let contest of contests)
+      {
+        let tmp = contest.event + contest.link;
+        var event = {
+          summary: contest.event,
+          description: tmp,
+          colorId: 1,
+          start: {
+            dateTime: contest.start,
+            timeZone: 'IST',
+          },
+          end: {
+            dateTime: contest.end,
+            timeZone: 'IST',
+          },
+          attendees: 'abc'
+        }
+        User.find((err,user)=>{
+          if(err)console.log("error at 145",err);
+          else{
+            event.attendees = user.email;
+            calendar.freebusy.query(
+              {
+                resource: {
+                  timeMin: eventStartTime,
+                  timeMax: eventEndTime,
+                  timeZone: 'IST',
+                  items: [{ id: 'primary' }],
+                },
+              },
+              (err, val) => {
+                // Check for errors in our query and log them if they exist.
+                if (err) console.error('Free Busy Query Error: ', err);
+                else{
+          
+                  // Create an array of all events on our calendar during that time.
+                  const eventArr = val.data.calendars.primary.busy
+            
+                  // Check if event array is empty which means we are not busy
+                  if (eventArr.length === 0) {
+                    console.log(eventStartTime, "  and ", eventEndTime);
+                    // If we are not busy create a new calendar event.
+                     calendar.events.insert(
+                      { calendarId: 'primary', resource: event },
+                      err => {
+                        // Check for errors and log them if they exist.
+                        if (err)  console.error('Error Creating Calender Event:', err)
+                        // Else log that the event was created.
+                        else console.error('Calendar event successfully created.', err)
+                      }
+                    )
+                  }
+                }
+          
+                // If event array is not empty log that we are busy.
+          
+          
+              }
+            )
           }
-        )
-  
-      // If event array is not empty log that we are busy.
-  
-      return console.log(eventStartTime)
-      return console.log(`Sorry I'm busy...`)
+        })
+      }
     }
-  )
 
+  })
+  
+  console.log("Events updated successfully");
 }
 
 
 
 
 
-
 module.exports = {
-    // register,
-    clist,
-    auth,
-    addCalendar
+  // register,
+  clist,
+  auth,
+  addCalendar
 }

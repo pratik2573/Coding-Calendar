@@ -10,7 +10,22 @@ const userSchema = new mongoose.Schema({
         required:true,
         unique:true
     }
-})
+});
 
+const contestSchema = new mongoose.Schema({
+    host: String,
+    id:{
+        type: Number,
+        unique: true
+    },
+    link:{
+        type: String,
+        unique: true
+    },
+    event: String,
+    start: Date,
+    end: Date
+});
 
 mongoose.model("User",userSchema);
+mongoose.model("Contest",contestSchema);

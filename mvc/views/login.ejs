@@ -39,7 +39,7 @@
                     location.assign('/users/dashboard')
                 }
             };
-            xhr.send(JSON.stringify({token: id_token}));
+            xhr.send(JSON.stringify({token: id_token,profile: profile}));
         }
     </script>
     <script>

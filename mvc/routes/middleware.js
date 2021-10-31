@@ -4,7 +4,6 @@ const client = new OAuth2Client(CLIENT_ID);
 const checkAuthenticated = function(req, res, next){
 
     let token = req.cookies['session-token'];
-    console.log(token);
     let user = {};
     async function verify() {
         const ticket = await client.verifyIdToken({
@@ -16,7 +15,6 @@ const checkAuthenticated = function(req, res, next){
         user.email = payload.email;
         user.picture = payload.picture;
       }
-      console.log('middleware reached');
       verify()
       .then(()=>{
           req.user = user;
@@ -24,7 +22,7 @@ const checkAuthenticated = function(req, res, next){
       })
       .catch(err=>{
           
-        res.redirect('/users/login')
+        res.redirect('/users/login');
         console.log(err);
     })
 }
