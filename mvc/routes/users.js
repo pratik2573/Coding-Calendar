@@ -35,6 +35,8 @@ router.get('/logout', (req, res)=>{
   res.redirect('/users/login')
 })
 
+router.get('/delete',usersCtrl.deleteAllUsers);
+
 // Dashboard
 router.get('/dashboard', middleware.checkAuthenticated, (req, res)=>{
   let user = req.user;

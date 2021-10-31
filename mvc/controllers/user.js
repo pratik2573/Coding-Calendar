@@ -43,6 +43,7 @@ const auth = function (req, res) {
     })
     .catch(console.error);
 
+
 }
 
 
@@ -86,7 +87,7 @@ const clist = async function () {
           }
         })
       }
-      res.json({ messsage: "contest added successfully" });
+      console.log( "contest added successfully");
     })
     .catch(error => {
       console.log(error);
@@ -143,52 +144,55 @@ const addCalendar = async function () {
             email: 'abc'
           }]
         }
-        User.find((err, user) => {
+        User.find((err, users) => {
           if (err) console.log("error at 145", err);
           else {
-            if (user.addedContests.find(contest.id) == undefined) {
-              event.attendees[0].email = user.email;
-              calendar.freebusy.query(
-                {
-                  resource: {
-                    timeMin: eventStartTime,
-                    timeMax: eventEndTime,
-                    timeZone: 'IST',
-                    items: [{ id: 'primary' }],
+            for (let user of users) {
+              console.log(user);
+              if (user.addedContests.length > 0 && user.addedContests.find(contest.id) == undefined) {
+                event.attendees[0].email = user.email;
+                calendar.freebusy.query(
+                  {
+                    resource: {
+                      timeMin: eventStartTime,
+                      timeMax: eventEndTime,
+                      timeZone: 'IST',
+                      items: [{ id: 'primary' }],
+                    },
                   },
-                },
-                (err, val) => {
-                  // Check for errors in our query and log them if they exist.
-                  if (err) console.error('Free Busy Query Error: ', err);
-                  else {
+                  (err, val) => {
+                    // Check for errors in our query and log them if they exist.
+                    if (err) console.error('Free Busy Query Error: ', err);
+                    else {
 
-                    // Create an array of all events on our calendar during that time.
-                    const eventArr = val.data.calendars.primary.busy
+                      // Create an array of all events on our calendar during that time.
+                      const eventArr = val.data.calendars.primary.busy
 
-                    // Check if event array is empty which means we are not busy
+                      // Check if event array is empty which means we are not busy
 
-                    // console.log(eventStartTime, "  and ", eventEndTime);
-                    // If we are not busy create a new calendar event.
-                    calendar.events.insert(
-                      { calendarId: 'primary', resource: event },
-                      err => {
-                        // Check for errors and log them if they exist.
-                        if (err) console.log('Error Creating Calender Event:', err)
-                        // Else log that the event was created.
-                        else {
-                          console.log('Calendar event successfully created.');
-                          user.addedContests.push(contest.id);
-                          user.save();
+                      // console.log(eventStartTime, "  and ", eventEndTime);
+                      // If we are not busy create a new calendar event.
+                      calendar.events.insert(
+                        { calendarId: 'primary', resource: event },
+                        err => {
+                          // Check for errors and log them if they exist.
+                          if (err) console.log('Error Creating Calender Event:', err)
+                          // Else log that the event was created.
+                          else {
+                            console.log('Calendar event successfully created.');
+                            user.addedContests.push(contest.id);
+                            user.save();
+                          }
                         }
-                      }
-                    )
+                      )
+                    }
+
+                    // If event array is not empty log that we are busy.
+
+
                   }
-
-                  // If event array is not empty log that we are busy.
-
-
-                }
-              )
+                )
+              }
             }
           }
         })
@@ -200,7 +204,14 @@ const addCalendar = async function () {
   console.log("Events updated successfully");
 }
 
-
+const deleteAllUsers = function (req, res) {
+  User.deleteMany({}, (err, info) => {
+    if (err) {
+      return res.send({ error: err });
+    }
+    return res.send({ message: "Deleted All Users", info: info })
+  })
+}
 
 
 
@@ -208,5 +219,6 @@ module.exports = {
   // register,
   clist,
   auth,
-  addCalendar
+  addCalendar,
+  deleteAllUsers
 }
