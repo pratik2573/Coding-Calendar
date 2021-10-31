@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
         type:String,
         required:true,
         unique:true
-    }
+    },
+    addedContests:[Number]
 });
 
 const contestSchema = new mongoose.Schema({

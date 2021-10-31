@@ -18,8 +18,8 @@ const auth = function (req, res) {
   user.save((err, user) => {
     if (err) {
       if (err.errmsg && err.errmsg.includes("duplicate key error") && err.errmsg.includes("email")) {
-       console.log( "Email already exists" );
-      }else console.log( "Something went wrong" );
+        console.log("Email already exists");
+      } else console.log("Something went wrong");
     } else {
       console.log("New user added");;
     }
@@ -46,7 +46,7 @@ const auth = function (req, res) {
 }
 
 
-const clist = async function (req, res) {
+const clist = async function () {
   let clist_token = 'username=priyanshu_x&api_key=1e0a1d7b14cf84194ca2a240efc8e735b28b9422'
   let URL_BASE = 'https://clist.by/api/v2/'
 
@@ -80,7 +80,7 @@ const clist = async function (req, res) {
           if (err) {
             if (err.errmsg && err.errmsg.includes("duplicate key error") && err.errmsg.includes("email")) {
               console.log("Email already exists");
-            }else console.log("Something went wrong");
+            } else console.log("Something went wrong");
           } else {
             contestsAdded.push(newContest);
           }
@@ -93,7 +93,8 @@ const clist = async function (req, res) {
     })
 }
 
-const addCalendar = async function (req, res) {
+const addCalendar = async function () {
+  clist();
   // Create a new instance of oAuth and set our Client ID & Client Secret.
   const oAuth2Client = new OAuth2(
     '966641561326-7nivlb5sna5dpcloaot4d51oba9n46ej.apps.googleusercontent.com',
@@ -120,12 +121,11 @@ const addCalendar = async function (req, res) {
   // eventEndTime.setMinutes(eventEndTime.getMinutes() + 45)
 
   // Create a dummy event for temp uses in our calendar
-  Contest.find((err,contests)=>{
+  Contest.find((err, contests) => {
     if (err) {
-      console.log("error at 125",err);
-    }else{
-      for(let contest of contests)
-      {
+      console.log("error at 125", err);
+    } else {
+      for (let contest of contests) {
         let tmp = contest.event + contest.link;
         var event = {
           summary: contest.event,
@@ -139,57 +139,64 @@ const addCalendar = async function (req, res) {
             dateTime: contest.end,
             timeZone: 'IST',
           },
-          attendees: 'abc'
+          attendees: [{
+            email: 'abc'
+          }]
         }
-        User.find((err,user)=>{
-          if(err)console.log("error at 145",err);
-          else{
-            event.attendees = user.email;
-            calendar.freebusy.query(
-              {
-                resource: {
-                  timeMin: eventStartTime,
-                  timeMax: eventEndTime,
-                  timeZone: 'IST',
-                  items: [{ id: 'primary' }],
+        User.find((err, user) => {
+          if (err) console.log("error at 145", err);
+          else {
+            if (user.addedContests.find(contest.id) == undefined) {
+              event.attendees[0].email = user.email;
+              calendar.freebusy.query(
+                {
+                  resource: {
+                    timeMin: eventStartTime,
+                    timeMax: eventEndTime,
+                    timeZone: 'IST',
+                    items: [{ id: 'primary' }],
+                  },
                 },
-              },
-              (err, val) => {
-                // Check for errors in our query and log them if they exist.
-                if (err) console.error('Free Busy Query Error: ', err);
-                else{
-          
-                  // Create an array of all events on our calendar during that time.
-                  const eventArr = val.data.calendars.primary.busy
-            
-                  // Check if event array is empty which means we are not busy
-                  if (eventArr.length === 0) {
-                    console.log(eventStartTime, "  and ", eventEndTime);
+                (err, val) => {
+                  // Check for errors in our query and log them if they exist.
+                  if (err) console.error('Free Busy Query Error: ', err);
+                  else {
+
+                    // Create an array of all events on our calendar during that time.
+                    const eventArr = val.data.calendars.primary.busy
+
+                    // Check if event array is empty which means we are not busy
+
+                    // console.log(eventStartTime, "  and ", eventEndTime);
                     // If we are not busy create a new calendar event.
-                     calendar.events.insert(
+                    calendar.events.insert(
                       { calendarId: 'primary', resource: event },
                       err => {
                         // Check for errors and log them if they exist.
-                        if (err)  console.error('Error Creating Calender Event:', err)
+                        if (err) console.log('Error Creating Calender Event:', err)
                         // Else log that the event was created.
-                        else console.error('Calendar event successfully created.', err)
+                        else {
+                          console.log('Calendar event successfully created.');
+                          user.addedContests.push(contest.id);
+                          user.save();
+                        }
                       }
                     )
                   }
+
+                  // If event array is not empty log that we are busy.
+
+
                 }
-          
-                // If event array is not empty log that we are busy.
-          
-          
-              }
-            )
+              )
+            }
           }
         })
       }
     }
 
   })
-  
+
   console.log("Events updated successfully");
 }
 

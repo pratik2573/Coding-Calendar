@@ -15,10 +15,10 @@ router.get('/', function(req, res, next) {
 
 
 // Clist
-router.get('/fetch',usersCtrl.clist);
+// router.get('/fetch',usersCtrl.clist);
 
 // Calendar
-router.get('/calendar',usersCtrl.addCalendar);
+// router.get('/calendar',usersCtrl.addCalendar);
 
 // Login Page
 router.get('/login',(req,res)=>{
