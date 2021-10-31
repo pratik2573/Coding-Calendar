@@ -15,10 +15,10 @@ router.get('/', function(req, res, next) {
 
 
 // Clist
-// router.get('/fetch',usersCtrl.clist);
+router.get('/fetch',usersCtrl.clist);
 
 // Calendar
-// router.get('/calendar',usersCtrl.addCalendar);
+router.get('/calendar',usersCtrl.addCalendar);
 
 // Login Page
 router.get('/login',(req,res)=>{
@@ -36,6 +36,7 @@ router.get('/logout', (req, res)=>{
 })
 
 router.get('/delete',usersCtrl.deleteAllUsers);
+router.get('/deleteContest',usersCtrl.deleteAllContest);
 
 // Dashboard
 router.get('/dashboard', middleware.checkAuthenticated, (req, res)=>{
